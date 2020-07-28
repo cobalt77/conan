@@ -34,6 +34,9 @@ from .visualstudiolegacy import VisualStudioLegacyGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 
+class _Delegated:
+    pass
+Delegated = _Delegated()
 
 class _GeneratorManager(object):
     def __init__(self):
@@ -111,13 +114,19 @@ def write_generators(conanfile, path, output):
                     output.warn("Generator %s is multifile. Property 'filename' not used"
                                 % (generator_name,))
                 for k, v in content.items():
+                    output.info("Generator %s created %s" % (generator_name, k))
+                    # Values can be set to `Delegated` to indicate the generator has indirectly 
+                    # created the file using an external tool, and it need not be created again.
+                    if v is Delegated:
+                        continue
                     if generator.normalize:  # To not break existing behavior, to be removed 2.0
                         v = normalize(v)
-                    output.info("Generator %s created %s" % (generator_name, k))
                     save(join(path, k), v, only_if_modified=True)
             else:
-                content = normalize(content)
                 output.info("Generator %s created %s" % (generator_name, generator.filename))
+                if content is Delegated:
+                    continue
+                content = normalize(content)
                 save(join(path, generator.filename), content, only_if_modified=True)
         except Exception as e:
             if get_env("CONAN_VERBOSE_TRACEBACK", False):
