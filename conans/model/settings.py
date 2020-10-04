@@ -336,9 +336,11 @@ class Settings(object):
             if isinstance(other_field_def, str):
                 other_field_def = [other_field_def]
 
+            field_pred = other_field_def if callable(other_field_def) else lambda x: x in other_field_def
+
             values_to_remove = []
             for value in config_item.values_range:  # value = "Visual Studio"
-                if value not in other_field_def:
+                if not field_pred(value):
                     values_to_remove.append(value)
                 else:  # recursion
                     if (not config_item.is_final and isinstance(other_field_def, dict) and
@@ -346,9 +348,10 @@ class Settings(object):
                         config_item[value].constraint(other_field_def[value])
 
             # Sanity check of input constraint values
-            for value in other_field_def:
-                if value not in config_item.values_range:
-                    raise ConanException(bad_value_msg(field, value, config_item.values_range))
+            if not callable(other_field_def):
+                for value in other_field_def:
+                    if value not in config_item.values_range:
+                        raise ConanException(bad_value_msg(field, value, config_item.values_range))
 
             config_item.remove(values_to_remove)
 
